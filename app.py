@@ -3,8 +3,6 @@ import json
 
 app = Flask(__name__)
 
-print __name__
-
 @app.route('/v1/api/hello_world')
 def hello_world():
     return 'Hello, World!'
