@@ -1,5 +1,6 @@
 ---
 - hosts: localhost
+  gather_facts: no
   connection: local
 
   vars:
@@ -19,50 +20,73 @@
     credentials_file: client_secrets.json
     document_root: /var/www/html
     mig_size: 3
-    service_account_email: "{{ service_account@project_id.iam.gserviceaccount.com }}"
+    service_account_email: "{{ service_account }}@{{ project_id }}.iam.gserviceaccount.com"
+
 
   tasks:
-    - name: create IP address
-      gcp_compute_address:
+    - name: debug
+      debug:
+        msg: "{{ service_account_email }}"
+
+    - name: ip addr
+      gce_eip:
         name: "{{ ip_name }}"
         region: "{{ region }}"
-        auth_kind: serviceaccount
-        service_account_file: "{{ credentials_file }}"
-        scopes: https://www.googleapis.com/auth/compute
-        state: present
-      register: address
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+#    - name: create IP address
+#      gcp_compute_address:
+#        auth_kind: serviceaccount
+#        name: "{{ ip_name }}"
+#        project: "{{ project_id }}"
+#        region: "{{ region }}"
+#        scopes:
+#          - https://www.googleapis.com/auth/compute
+#        service_account_file: "{{ credentials_file }}"
+#        state: present
+#      register: address
+
 
     - name: create instance
       gce:
         instance_names: "{{ instance_name }}"
+        credentials_file: "{{ credentials_file }}"
         zone: "{{ zone }}"
         machine_type: "{{ machine_type }}"
-        #state: present
         service_account_email: "{{ service_account_email }}"
-        external_ip: "{{ ip_name }}"
+        service_account_permissions:
+          - compute-rw
+#        external_ip: "{{ ip_name }}"
+        project_id: "{{ project_id }}"
       register: gce
+
 
     - name: deploy app
       copy:
         src: app_name
-        dest: "{{ document_root/app_name }}"
+        dest: "{{ document_root }}/{{ app_name }}"
         force: yes
+
 
     - name: update apt and install nginx
       apt:
         name: nginx
         state: latest
         update_cache: yes
-    
+   
+ 
     - name: create image from app
       gcp_compute_image:
         name: "{{ image_name }}"
+        project: "{{ project_id }}"
         source_disk: "{{ instance_name }}"
         
 
     - name: create template from app
       gcp_compute_instance_template:
         auth_kind: serviceaccount
+        project: "{{ project_id }}"
         service_account_file: "{{ credentials_file }}"
         properties:
           - disks:
@@ -71,8 +95,9 @@
 
 
     - name: create managed instance group using template
-      gcp_mig:
+      gce_mig:
         name: "{{ mig_name }}"
+        project: "{{ project_id }}"
         recreate_instances: yes
         size: "{{ mig_size }}"
         template: "{{ template_name }}"
@@ -86,7 +111,7 @@
             cool_down_period: 45
             cpu_utilization:
               target: 0.2
-			load_balancing_utilization:
+            load_balancing_utilization:
               target: 0.3
 
 # TODO: MAY NOT BE USABLE
