@@ -3,6 +3,10 @@ import json
 
 app = Flask(__name__)
 
+@app.route('/')
+def place_holder(phArgs):
+    return 'Placeholder!'
+
 @app.route('/v1/api/hello_world')
 def hello_world():
     return 'Hello, World!'
