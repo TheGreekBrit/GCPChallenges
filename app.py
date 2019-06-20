@@ -4,7 +4,7 @@ import json
 app = Flask(__name__)
 
 @app.route('/')
-def place_holder(phArgs):
+def place_holder():
     return 'Placeholder!'
 
 @app.route('/v1/api/hello_world')
